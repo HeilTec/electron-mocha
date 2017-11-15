@@ -1,8 +1,23 @@
-const opts = window.__args__
+let opts = window.__args__
 
 if (!opts.interactive) {
   require('./console')
 }
+
+const grepFromSearch = window.location.search
+  .slice(1)
+  .split('&')
+  .map(term => term.split('='))
+  .filter(([item, value]) => item.match(/grep/))
+  .map(([item, value]) => { 
+    const opt = {}
+    opt[item] = decodeURIComponent(value)
+    return opt
+  })
+  .reduce((opts, opt) => Object.assign(opts, opt), {})
+
+opts = Object.assign({}, opts, grepFromSearch)
+
 
 const mocha = require('../mocha')
 const { ipcRenderer: ipc } = require('electron')
@@ -32,6 +47,9 @@ ipc.on('mocha-start', () => {
   } catch ({ message, stack }) {
     ipc.send('mocha-error', { message, stack })
   }
+})
+window.addEventListener('beforeunload', function () {
+  ipc.removeAllListeners('mocha-start')
 })
 
 // Request re-run on reload in --interactive mode
